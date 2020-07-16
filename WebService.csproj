@@ -4,14 +4,17 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+<!--
   <ItemGroup>
     <Compile Remove="wwwroot\**" />
     <Content Remove="wwwroot\**" />
     <EmbeddedResource Remove="wwwroot\**" />
     <None Remove="wwwroot\**" />
   </ItemGroup>
+-->
 
   <ItemGroup>
+    <PackageReference Include="System.IO.FileSystem" Version="4.3.0" />
     <PackageReference Include="System.Text.Json" Version="4.7.1" />
   </ItemGroup>
 

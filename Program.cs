@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
-namespace Microsoft.Research.EyeCatcher.WebService.Controllers
+namespace DeepDataServer
 {
     public class Program
     {

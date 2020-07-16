@@ -1,7 +1,8 @@
 # DeepDataServer
+
 Web Server for uploading of DeepData from EyeCatcher
 
-# Contributing
+## Contributing
 
 This project welcomes contributions and suggestions. Most contributions require you to
 agree to a Contributor License Agreement (CLA) declaring that you have the right to,

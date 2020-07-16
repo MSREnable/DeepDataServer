@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace Microsoft.Research.EyeCatcher.WebService.Controllers
+namespace DeepDataServer
 {
     public class Startup
     {
@@ -19,6 +19,7 @@ namespace Microsoft.Research.EyeCatcher.WebService.Controllers
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            services.AddRazorPages();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -30,12 +31,13 @@ namespace Microsoft.Research.EyeCatcher.WebService.Controllers
             }
 
             app.UseRouting();
-
+            app.UseStaticFiles();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapRazorPages();
             });
         }
     }
