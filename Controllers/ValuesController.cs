@@ -3,10 +3,9 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Microsoft.Research.EyeCatcher.Library;
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
-using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace DeepDataServer.Controllers
@@ -15,31 +14,37 @@ namespace DeepDataServer.Controllers
     [ApiController]
     public class ValuesController : ControllerBase
     {
-        /// <summary>
-        /// Connection string from environment.
-        /// </summary>
-        static readonly string ConnectionString = Environment.GetEnvironmentVariable("BLOB_STORE_STRING");
+        private const string SchemaVersion = "200407";
+        private readonly DirectoryInfo storageDirectory = Directory.CreateDirectory($"/data/{SchemaVersion}");
 
         // GET api/values
         [HttpGet]
         public async Task<ActionResult<string>> Get()
         {
-            await Task.Yield();
+            var defaultDataPath = Path.Combine(Directory.GetCurrentDirectory(), "DefaultData.json");
+            using (var defaultDataStream = new FileInfo(defaultDataPath).OpenText())
+            {
+                return await defaultDataStream.ReadToEndAsync();
+            }
+        }
 
-            // Connect to blob store.
-            //var cloudStorageAccount = CloudStorageAccount.Parse(ConnectionString);
-            //var cloudBlobClient = cloudStorageAccount.CreateCloudBlobClient();
+        [HttpPut("{deviceSku}/{userId}/{sessionId}/{folderName}/{fileName}")]
+        public async Task Put(string deviceSku, string userId, string sessionId, string folderName, string fileName)
+        {
+            // Directory we will write into
+            Console.WriteLine($"Uploaded {deviceSku} {userId} {sessionId} {folderName} {fileName}");
 
-            // Get blob.
-            //var container = cloudBlobClient.GetContainerReference("defaultdata");
-            //var reference = container.GetBlobReference("DefaultData.json");
-            var stream = new MemoryStream();
-            //await reference.DownloadToStreamAsync(stream);
-            stream.Seek(0, SeekOrigin.Begin);
-            var reader = new StreamReader(stream);
-            var json = reader.ReadToEnd();
+            using (var hash = MD5.Create())            
+            {
+                var userIdHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(userId))).Replace('/','_');
+                var sessionIdHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(sessionId))).Replace('/','_');
 
-            return json;
+                var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{userIdHash}/{sessionIdHash}");
+                using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{folderName}-{fileName}")).OpenWrite())
+                {
+                    await Request.Body.CopyToAsync(fileStream);
+                }
+            }
         }
 
         private static async Task<Stream> ReadStreamAsync(MultipartReader reader, string expectedFileName)
@@ -75,50 +80,22 @@ namespace DeepDataServer.Controllers
             return value;
         }
 
-        private static async Task<string[]> GetHierarchyNamesAsync(Stream stream)
-        {
-            var instanceId = Guid.Empty;
-            var userId = Guid.Empty;
-            var sessionTimestamp = DateTimeOffset.UtcNow;
-            sessionTimestamp -= sessionTimestamp.TimeOfDay;
-            var sessionId = Guid.Empty;
-
-            string json;
-            using (var reader = new StreamReader(stream, leaveOpen: true))
-            {
-                json = await reader.ReadToEndAsync();
-            }
-            stream.Seek(0, SeekOrigin.Begin);
-
-            ISessionData sd = JsonSerializer.Deserialize<ISessionData>(json);
-
-            /*
-                // Second format of Json Object has session properties two levels down.
-                if (ob.TryGetValue(nameof(LeafSerializableImageData.Position), out IJsonValue position) && position.ValueType == JsonValueType.Object)
-                {
-                    if (position.GetObject().TryGetValue(nameof(LeafSerializablePositionData.Session), out IJsonValue session) && session.ValueType == JsonValueType.Object)
-                    {
-                        ob = session.GetObject();
-                    }
-                }
-            */
-
-            var result = Naming.GetBlobHierarchyNames(sd.InstanceId, sd.UserId, sd.SessionId, sd.SessionTimestamp);
-            return result;
-        }
-
         // POST api/values
         [HttpPost]
-        public async Task Post()
+        public async Task Post(string UserId, string SessionId)
         {
 
             // Prepare to read body;
             var contentType = MediaTypeHeaderValue.Parse(Request.ContentType);
             var boundary = HeaderUtilities.RemoveQuotes(contentType.Boundary);
             var reader = new MultipartReader(boundary.Value, Request.Body);
+            var section1 = await reader.ReadNextSectionAsync();
+            var fileSection1 = section1.AsFileSection();
+            var section2 = await reader.ReadNextSectionAsync();
+            var fileSection2 = section2.AsFileSection();
 
             // Directory we will write into
-            var storageDirectory = new DirectoryInfo(@"\Data");
+            var storageDirectory = new DirectoryInfo(@"/Data");
 
             // Work through sections.
             var moreTodo = true;
@@ -135,25 +112,19 @@ namespace DeepDataServer.Controllers
                 }
                 else
                 {
-                    // Generate storage directory hierarchy
-                    var hierarchyNames = await GetHierarchyNamesAsync(annotationStream);
-
-                    storageDirectory = storageDirectory.CreateSubdirectory(hierarchyNames[0]);
-                    for (var i = 1; i < hierarchyNames.Length; i++)
-                    {
-                        storageDirectory = storageDirectory.CreateSubdirectory(hierarchyNames[i]);
-                    }
+                    var userStorageDirectory = storageDirectory.CreateSubdirectory(UserId); // TODO: Hash this in the future
+                    var sessionStorageDirectory = userStorageDirectory.CreateSubdirectory(SessionId);
 
                     var guid = Naming.GetFileBaseName();
                     var imageFileName = Naming.GetImageFileName(guid);
                     var annotationFileName = Naming.GetAnnotationFileName(guid);
 
-                    using (var imageFileStream = new FileInfo(Path.Combine(storageDirectory.FullName, imageFileName)).Open(FileMode.OpenOrCreate))
+                    using (var imageFileStream = new FileInfo(Path.Combine(sessionStorageDirectory.FullName, imageFileName)).Open(FileMode.OpenOrCreate))
                     {
                         await imageStream.CopyToAsync(imageFileStream);
                     }
 
-                    using (var annotationFileStream = new FileInfo(Path.Combine(storageDirectory.FullName, annotationFileName)).Open(FileMode.OpenOrCreate))
+                    using (var annotationFileStream = new FileInfo(Path.Combine(sessionStorageDirectory.FullName, annotationFileName)).Open(FileMode.OpenOrCreate))
                     {
                         await annotationStream.CopyToAsync(annotationFileStream);
                     }

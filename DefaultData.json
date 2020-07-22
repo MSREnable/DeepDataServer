@@ -1,0 +1,16 @@
+{
+  "Version": 1,
+  "DefaultTopCenterCameraMmY": -6.0,
+  "CameraPositions": [
+    {
+      "HostSku": "Surface_Book_1793",
+      "ScreenWidthInRawPixels": 3240.0,
+      "ScreenHeightInRawPixels": 2160.0,
+      "DiagonalSizeInInches": 15.016962134321775,
+      "Orientation": "Landscape",
+      "VideoCapturePanel": "Front",
+      "CameraMmX": 158.87258687258688,
+      "CameraMmY": -6.0
+    }
+  ]
+}
