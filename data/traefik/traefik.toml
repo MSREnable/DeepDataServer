@@ -1,0 +1,33 @@
+logLevel = "INFO"
+defaultEntryPoints = ["http", "https"]
+[traefikLog]
+format = "json"
+[accessLog]
+format = "json"
+[web]
+address = ":8080"
+  [web.auth.basic]
+  users = [ "admin:$apr1$2Q8Ty.Ci$BKVnlSMcVMVUCbAm4D6i11"]
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+    [entryPoints.http.redirect]
+      entryPoint = "https"
+  [entryPoints.https]
+  address = ":443"
+    [entryPoints.https.tls]
+[docker]
+domain = "deepeyes-la.teamgleason.org"
+exposedbydefault = false
+watch = true
+[acme]
+email = "dev@teamgleason.org"
+storage = "/etc/traefik/acme.json"
+entryPoint = "https"
+onHostRule = false
+onDemand = false
+acmeLogging = true
+[acme.httpChallenge]
+entryPoint = "http"
+[[acme.domains]]
+main = "deepeyes-la.teamgleason.org"
