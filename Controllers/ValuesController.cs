@@ -36,10 +36,9 @@ namespace DeepDataServer.Controllers
 
             using (var hash = MD5.Create())            
             {
-                var userIdHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(userId))).Replace('/','_');
-                var sessionIdHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(sessionId))).Replace('/','_');
-
-                var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{userIdHash}/{sessionIdHash}");
+                var userIdHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(userId.ToLowerInvariant()))).Replace('/','_');
+    
+                var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{userIdHash}/{sessionId}");
                 using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{folderName}-{fileName}")).OpenWrite())
                 {
                     await Request.Body.CopyToAsync(fileStream);
