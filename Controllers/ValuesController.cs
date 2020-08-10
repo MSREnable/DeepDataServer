@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 using Microsoft.Research.EyeCatcher.Library;
 using System;
@@ -14,6 +15,14 @@ namespace DeepDataServer.Controllers
     [ApiController]
     public class ValuesController : ControllerBase
     {
+        private readonly ILogger _logger;
+
+        public ValuesController(ILogger<ValuesController> logger)
+        {
+            _logger = logger;
+        }
+
+        private const string UserIdSalt = "NeverPunt-";
         private const string SchemaVersion = "200407";
         private readonly DirectoryInfo storageDirectory = Directory.CreateDirectory($"/data/{SchemaVersion}");
 
@@ -32,11 +41,11 @@ namespace DeepDataServer.Controllers
         public async Task Put(string deviceSku, string userId, string sessionId, string folderName, string fileName)
         {
             // Directory we will write into
-            Console.WriteLine($"Uploaded {deviceSku} {userId} {sessionId} {folderName} {fileName}");
+            _logger.LogInformation($"Uploaded {deviceSku} {userId} {sessionId} {folderName} {fileName}");
 
             using (var hash = MD5.Create())            
             {
-                var userIdHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(userId.ToLowerInvariant()))).Replace('/','_');
+                var userIdHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(UserIdSalt + userId.ToLowerInvariant()))).Replace('/','_');
     
                 var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{userIdHash}/{sessionId}");
                 using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{folderName}-{fileName}")).OpenWrite())
