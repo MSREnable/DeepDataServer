@@ -37,6 +37,14 @@ namespace DeepDataServer.Controllers
             }
         }
 
+        private string CreateUserHash(string userId)
+        {
+            using (var hash = MD5.Create())            
+            {
+                return Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(UserIdSalt + userId.ToLowerInvariant()))).Replace('/','_');
+            }
+        }
+
         // Support for uploading session metadata
         [HttpPut("{deviceSku}/{userId}/{sessionId}/{fileName}")]
         public async Task Put(string deviceSku, string userId, string sessionId, string fileName)
@@ -44,15 +52,10 @@ namespace DeepDataServer.Controllers
             // Directory we will write into
             _logger.LogInformation($"Uploaded {deviceSku} {userId} {sessionId} {fileName}");
 
-            using (var hash = MD5.Create())            
+            var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{CreateUserHash(userId)}/{sessionId}");
+            using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{fileName}")).OpenWrite())
             {
-                var userIdHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(UserIdSalt + userId.ToLowerInvariant()))).Replace('/','_');
-    
-                var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{userIdHash}/{sessionId}");
-                using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{fileName}")).OpenWrite())
-                {
-                    await Request.Body.CopyToAsync(fileStream);
-                }
+                await Request.Body.CopyToAsync(fileStream);
             }
         }
         
@@ -62,15 +65,10 @@ namespace DeepDataServer.Controllers
             // Directory we will write into
             _logger.LogInformation($"Uploaded {deviceSku} {userId} {sessionId} {folderName} {fileName}");
 
-            using (var hash = MD5.Create())            
+            var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{CreateUserHash(userId)}/{sessionId}");
+            using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{folderName}-{fileName}")).OpenWrite())
             {
-                var userIdHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(UserIdSalt + userId.ToLowerInvariant()))).Replace('/','_');
-    
-                var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{userIdHash}/{sessionId}");
-                using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{folderName}-{fileName}")).OpenWrite())
-                {
-                    await Request.Body.CopyToAsync(fileStream);
-                }
+                await Request.Body.CopyToAsync(fileStream);
             }
         }
 
