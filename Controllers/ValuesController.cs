@@ -65,7 +65,7 @@ namespace DeepDataServer.Controllers
             // Directory we will write into
             _logger.LogInformation($"Uploaded {deviceSku} {userId} {sessionId} {folderName} {fileName}");
 
-            var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{CreateUserHash(userId)}/{sessionId}");
+            var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{CreateUserHash(userId)}/{sessionId}/frames/");
             using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{folderName}-{fileName}")).OpenWrite())
             {
                 await Request.Body.CopyToAsync(fileStream);
