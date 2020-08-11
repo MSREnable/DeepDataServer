@@ -37,6 +37,25 @@ namespace DeepDataServer.Controllers
             }
         }
 
+        // Support for uploading session metadata
+        [HttpPut("{deviceSku}/{userId}/{sessionId}/{fileName}")]
+        public async Task Put(string deviceSku, string userId, string sessionId, string fileName)
+        {
+            // Directory we will write into
+            _logger.LogInformation($"Uploaded {deviceSku} {userId} {sessionId} {fileName}");
+
+            using (var hash = MD5.Create())            
+            {
+                var userIdHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(UserIdSalt + userId.ToLowerInvariant()))).Replace('/','_');
+    
+                var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{userIdHash}/{sessionId}");
+                using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{fileName}")).OpenWrite())
+                {
+                    await Request.Body.CopyToAsync(fileStream);
+                }
+            }
+        }
+        
         [HttpPut("{deviceSku}/{userId}/{sessionId}/{folderName}/{fileName}")]
         public async Task Put(string deviceSku, string userId, string sessionId, string folderName, string fileName)
         {
