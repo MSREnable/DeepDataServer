@@ -26,7 +26,11 @@ namespace DeepDataServer.Controllers
         private readonly DirectoryInfo storageDirectory = Directory.CreateDirectory($"{DataRoot}/{SchemaVersion}");
         private readonly DirectoryInfo usersDirectory = Directory.CreateDirectory($"{DataRoot}/{SchemaVersion}/private/users");
 
-        // GET api/values
+        private string SanitizeFileName(string fileName)
+        {
+            return String.Join("_", fileName.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
+        }
+
         [HttpGet]
         public async Task<ActionResult<string>> Get()
         {
@@ -37,13 +41,37 @@ namespace DeepDataServer.Controllers
             }
         }
 
+        [HttpGet("{userId}")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(403)]
+        public async Task<StatusCodeResult> Get(string userId)
+        {
+            if (!CheckUserConsent(userId))
+            {
+                _logger.LogInformation($"Denied {userId}");
+                return new StatusCodeResult(403);
+            }
+
+            _logger.LogInformation($"Consent Found for {userId}");
+            return Ok();
+        }
+
         private string CreateUserHash(string userId)
         {
             using (var hash = MD5.Create())            
             {
-                var userHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(UserIdSalt + userId.ToLowerInvariant()))).Replace('/','_');
+                var userHash = SanitizeFileName(
+                    Convert.ToBase64String(
+                        hash.ComputeHash(
+                            Encoding.UTF8.GetBytes(
+                                UserIdSalt + userId.ToLowerInvariant()
+                            )
+                        )
+                    ).Replace('/','_').TrimEnd('=')
+                );
 
-                var fullPath = Path.Combine(usersDirectory.FullName, $"{userHash}");
+                var userDirectory = usersDirectory.CreateSubdirectory($"{userHash}");
+                var fullPath = Path.Combine(userDirectory.FullName, "id");
                 if (!(new FileInfo(fullPath).Exists))
                 {
                     using (var streamWriter = new StreamWriter(fullPath))
@@ -71,11 +99,11 @@ namespace DeepDataServer.Controllers
             if (!CheckUserConsent(userId))
             {
                 _logger.LogInformation($"Denied {deviceSku} {userId} {sessionId} {fileName}");
-                return Forbid();
+                return new StatusCodeResult(403);
             }
 
-            var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{CreateUserHash(userId)}/{sessionId}");
-            using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{fileName}")).OpenWrite())
+            var fileDirectory = storageDirectory.CreateSubdirectory($"{SanitizeFileName(deviceSku)}/{CreateUserHash(userId)}/{SanitizeFileName(sessionId)}");
+            using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{SanitizeFileName(fileName)}")).OpenWrite())
             {
                 await Request.Body.CopyToAsync(fileStream);
             }
@@ -92,11 +120,11 @@ namespace DeepDataServer.Controllers
             if (!CheckUserConsent(userId))
             {
                 _logger.LogInformation($"Denied {deviceSku} {userId} {sessionId} {folderName} {fileName}");
-                return Forbid();
+                return new StatusCodeResult(403);
             }
 
-            var fileDirectory = storageDirectory.CreateSubdirectory($"{deviceSku}/{CreateUserHash(userId)}/{sessionId}/frames/");
-            using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{folderName}-{fileName}")).OpenWrite())
+            var fileDirectory = storageDirectory.CreateSubdirectory($"{SanitizeFileName(deviceSku)}/{CreateUserHash(userId)}/{SanitizeFileName(sessionId)}/frames/");
+            using (var fileStream = new FileInfo(Path.Combine(fileDirectory.FullName, $"{SanitizeFileName(folderName)}-{SanitizeFileName(fileName)}")).OpenWrite())
             {
                 await Request.Body.CopyToAsync(fileStream);
             }
