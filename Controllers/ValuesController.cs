@@ -23,6 +23,7 @@ namespace DeepDataServer.Controllers
         private const string DataRoot = "/data";
         private const string SchemaVersion = "200407";
         private const string UserConsent = "UserConsent";
+        private const string UserId = "UserId";
         private readonly DirectoryInfo storageDirectory = Directory.CreateDirectory($"{DataRoot}/{SchemaVersion}");
         private readonly DirectoryInfo usersDirectory = Directory.CreateDirectory($"{DataRoot}/{SchemaVersion}/private/users");
 
@@ -71,7 +72,7 @@ namespace DeepDataServer.Controllers
                 );
 
                 var userDirectory = usersDirectory.CreateSubdirectory($"{userHash}");
-                var fullPath = Path.Combine(userDirectory.FullName, "id");
+                var fullPath = Path.Combine(userDirectory.FullName, $"{UserId}");
                 if (!(new FileInfo(fullPath).Exists))
                 {
                     using (var streamWriter = new StreamWriter(fullPath))
