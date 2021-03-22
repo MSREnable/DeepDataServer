@@ -1,0 +1,1 @@
+scp data/traefik/traefik.toml tg-queue:.

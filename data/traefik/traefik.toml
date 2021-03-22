@@ -17,7 +17,7 @@ address = ":8080"
   address = ":443"
     [entryPoints.https.tls]
 [docker]
-domain = "deepeyes-la.teamgleason.org"
+domain = "tg-queue.37services.org"
 exposedbydefault = false
 watch = true
 [acme]
@@ -30,4 +30,6 @@ acmeLogging = true
 [acme.httpChallenge]
 entryPoint = "http"
 [[acme.domains]]
-main = "deepeyes-la.teamgleason.org"
+main = "tg-queue.37services.org"
+[[acme.domains]]
+main = "test-tg-queue.37services.org"
